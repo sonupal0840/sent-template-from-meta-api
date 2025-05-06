@@ -1,0 +1,49 @@
+{% load static %}
+
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lead Report</title>
+    <link rel="stylesheet" href="{% static 'css/report.css' %}">
+</head>
+
+<body>
+    <div class="container">
+        <h2>Lead Report</h2>
+
+        <form method="get" class="filter-form">
+            {{ form.as_p }}
+            <button type="submit" class="btn">Filter</button>
+        </form>
+
+        <table class="lead-table">
+            <thead>
+                <tr>
+                    <th>Name</th>
+                    <th>Email</th>
+                    <th>Phone</th>
+                    <th>Interest</th>
+                    <th>Score</th>
+                    <th>Segment</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for lead in leads %}
+                <tr>
+                    <td>{{ lead.name }}</td>
+                    <td>{{ lead.email }}</td>
+                    <td>{{ lead.phone }}</td>
+                    <td>{{ lead.interest }}</td>
+                    <td>{{ lead.score }}</td>
+                    <td>{{ lead.segment }}</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+</body>
+
+</html>

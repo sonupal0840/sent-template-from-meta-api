@@ -1,0 +1,86 @@
+/* static/css/styles.css */
+
+body {
+    font-family: Arial, sans-serif;
+    background-color: #f4f4f4;
+    margin: 0;
+    padding: 0;
+}
+
+h2 {
+    text-align: center;
+    font-size: 2.5rem;
+    margin-top: 30px;
+    color: #333;
+}
+
+.container {
+    width: 90%;
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.filter-form {
+    display: flex;
+    justify-content: center;
+    margin-bottom: 30px;
+}
+
+.filter-form button {
+    padding: 12px 20px;
+    background-color: #4CAF50;
+    color: white;
+    border: none;
+    border-radius: 5px;
+    font-size: 1rem;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+}
+
+.filter-form button:hover {
+    background-color: #45a049;
+}
+
+.lead-table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+    border: 1px solid #ccc;
+}
+
+.lead-table th,
+.lead-table td {
+    padding: 12px;
+    text-align: center;
+    border: 1px solid #ddd;
+}
+
+.lead-table th {
+    background-color: #4CAF50;
+    color: white;
+}
+
+.lead-table tr:nth-child(even) {
+    background-color: #f2f2f2;
+}
+
+.lead-table tr:hover {
+    background-color: #ddd;
+}
+
+@media (max-width: 768px) {
+    h2 {
+        font-size: 2rem;
+    }
+
+    .filter-form button {
+        font-size: 1rem;
+        padding: 10px 15px;
+    }
+
+    .lead-table th, .lead-table td {
+        font-size: 0.9rem;
+        padding: 8px;
+    }
+}
