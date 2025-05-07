@@ -1,4 +1,5 @@
 from django.db import models
+from django.utils import timezone
 
 class Lead(models.Model):
     name = models.CharField(max_length=100)
@@ -7,6 +8,7 @@ class Lead(models.Model):
     interest = models.CharField(max_length=100)
     score = models.IntegerField(default=0)
     segment = models.CharField(max_length=50, blank=True, null=True)
+    timestamp = models.DateTimeField(default=timezone.now)  # New field
 
     def __str__(self):
         return self.name

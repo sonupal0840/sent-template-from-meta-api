@@ -17,6 +17,9 @@
         <form method="get" class="filter-form">
             {{ form.as_p }}
             <button type="submit" class="btn">Filter</button>
+            <a href="{% url 'export_leads_csv' %}" class="btn">📥 Export Leads</a>
+
+            
         </form>
 
         <table class="lead-table">
