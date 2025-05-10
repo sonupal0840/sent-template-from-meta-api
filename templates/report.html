@@ -1,15 +1,12 @@
 {% load static %}
-
 <!DOCTYPE html>
 <html lang="en">
-
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Lead Report</title>
     <link rel="stylesheet" href="{% static 'css/report.css' %}">
 </head>
-
 <body>
     <div class="container">
         <h2>Lead Report</h2>
@@ -17,9 +14,7 @@
         <form method="get" class="filter-form">
             {{ form.as_p }}
             <button type="submit" class="btn">Filter</button>
-            <a href="{% url 'export_leads_csv' %}" class="btn">📥 Export Leads</a>
-
-            
+            <a href="{% url 'export_leads_csv' %}?interest={{ request.GET.interest }}&min_score={{ request.GET.min_score }}&max_score={{ request.GET.max_score }}" class="btn">📥 Export Filtered Leads</a>
         </form>
 
         <table class="lead-table">
@@ -29,24 +24,37 @@
                     <th>Email</th>
                     <th>Phone</th>
                     <th>Interest</th>
-                    <th>Score</th>
                     <th>Segment</th>
                 </tr>
             </thead>
             <tbody>
-                {% for lead in leads %}
+                {% for lead in page_obj %}
                 <tr>
                     <td>{{ lead.name }}</td>
                     <td>{{ lead.email }}</td>
                     <td>{{ lead.phone }}</td>
                     <td>{{ lead.interest }}</td>
-                    <td>{{ lead.score }}</td>
                     <td>{{ lead.segment }}</td>
                 </tr>
+                {% empty %}
+                <tr><td colspan="5">No leads match the filters.</td></tr>
                 {% endfor %}
             </tbody>
         </table>
+
+        <div class="pagination">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; first</a>
+                <a href="?page={{ page_obj.previous_page_number }}">prev</a>
+            {% endif %}
+
+            <span>Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}</span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">last &raquo;</a>
+            {% endif %}
+        </div>
     </div>
 </body>
-
 </html>

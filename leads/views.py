@@ -1,8 +1,38 @@
+
 from django.shortcuts import render, redirect, get_object_or_404
-from .forms import LeadForm, LeadFilterForm
-from .models import Lead
-import pandas as pd
+from django.core.paginator import Paginator
+from django.db.models import Q
 from django.http import HttpResponse
+from .models import Lead
+from .forms import LeadForm, LeadFilterForm
+from .tasks import send_email_task, send_whatsapp_task
+import pandas as pd
+
+# Home page: Lead creation view
+# def lead_create_view(request):
+#     if request.method == 'POST':
+#         form = LeadForm(request.POST)
+#         if form.is_valid():
+#             lead = form.save(commit=False)
+#             lead.compute_score_and_segment()
+#             lead.save()
+
+#             send_email_task.delay(
+#                 lead.email,
+#                 "Thank You for Your Interest",
+#                 "Thanks for your interest. Our team will follow up shortly."
+#             )
+#             if lead.phone:
+#                 send_whatsapp_task.delay(
+#                     lead.phone,
+#                     f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
+#                 )
+#             return redirect('lead_success')
+#     else:
+#         form = LeadForm()
+#     return render(request, 'lead_form.html', {'form': form})
+
+
 
 def lead_create_view(request):
     if request.method == 'POST':
@@ -11,17 +41,73 @@ def lead_create_view(request):
             lead = form.save(commit=False)
             lead.compute_score_and_segment()
             lead.save()
+
+            # Debugging the phone number
+            if lead.phone:
+                print(f"Sending WhatsApp message to {lead.phone}")  # Check phone number
+
+            # Sending email
+            send_email_task.delay(
+                lead.email,
+                "Thank You for Your Interest",
+                "Thanks for your interest. Our team will follow up shortly."
+            )
+
+            # Sending WhatsApp message if phone number is provided
+            if lead.phone:
+                send_whatsapp_task.delay(
+                    lead.phone,
+                    f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
+                )
+
             return redirect('lead_success')
     else:
         form = LeadForm()
     return render(request, 'lead_form.html', {'form': form})
 
+
+
+# Show all leads with search and pagination
+def lead_list(request):
+    leads = Lead.objects.all()
+    query = request.GET.get('q')
+    if query:
+        leads = leads.filter(
+            Q(name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(segment__icontains=query)
+        )
+    paginator = Paginator(leads, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'lead_list.html', {'page_obj': page_obj})
+
+# Delete a lead
+def delete_lead(request, lead_id):
+    lead = get_object_or_404(Lead, id=lead_id)
+    if request.method == 'POST':
+        lead.delete()
+        return redirect('lead_list')
+    return render(request, 'confirm_delete.html', {'lead': lead})
+
+# Lead success page
 def lead_success_view(request):
     return render(request, 'lead_success.html')
 
+# Send WhatsApp message to a single lead
+def send_whatsapp_message_view(request, pk):
+    lead = get_object_or_404(Lead, pk=pk)
+    if lead.phone:
+        send_whatsapp_task.delay(
+            lead.phone,
+            f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
+        )
+    return redirect('lead_list')
+
+# Report page
 def report_view(request):
     leads = Lead.objects.all()
-    form = LeadFilterForm(request.GET)
+    form = LeadFilterForm(request.GET or None)
     if form.is_valid():
         interest = form.cleaned_data.get('interest')
         min_score = form.cleaned_data.get('min_score')
@@ -34,30 +120,27 @@ def report_view(request):
         if max_score is not None:
             leads = leads.filter(score__lte=max_score)
 
-    return render(request, 'report.html', {'leads': leads, 'form': form})
+    paginator = Paginator(leads, 10)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+    return render(request, 'report.html', {'page_obj': page_obj, 'form': form})
 
-def lead_list(request):
-    leads = Lead.objects.all()
-    search_query = request.GET.get('search', '')
-    interest_filter = request.GET.get('interest', '')
-
-    if search_query:
-        leads = leads.filter(name__icontains=search_query)
-    if interest_filter:
-        leads = leads.filter(interest=interest_filter)
-
-    return render(request, 'lead_list.html', {'leads': leads})
-
+# CSV export
 def export_leads_csv(request):
-    leads = Lead.objects.all().values()
-    df = pd.DataFrame(leads)
+    leads = Lead.objects.all()
+    interest = request.GET.get('interest')
+    min_score = request.GET.get('min_score')
+    max_score = request.GET.get('max_score')
+
+    if interest:
+        leads = leads.filter(interest__icontains=interest)
+    if min_score:
+        leads = leads.filter(score__gte=min_score)
+    if max_score:
+        leads = leads.filter(score__lte=max_score)
+
+    df = pd.DataFrame(list(leads.values()))
     response = HttpResponse(content_type='text/csv')
-    response['Content-Disposition'] = 'attachment; filename=leads.csv'
+    response['Content-Disposition'] = 'attachment; filename=filtered_leads.csv'
     df.to_csv(path_or_buf=response, index=False)
     return response
-
-# 💥 New delete view
-def delete_lead(request, lead_id):
-    lead = get_object_or_404(Lead, id=lead_id)
-    lead.delete()
-    return redirect('lead_list')
