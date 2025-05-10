@@ -5,13 +5,12 @@ import environ
 # Initialize environment variables
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
-environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # ✅ Load from .env at root
+environ.Env.read_env(os.path.join(BASE_DIR, '.env'))  # Load from .env at root
 
 # Django Basic Settings
 SECRET_KEY = env("DJANGO_SECRET_KEY", default='insecure-secret')
 DEBUG = env.bool("DJANGO_DEBUG", default=False)
-# ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
-ALLOWED_HOSTS = ['leadgenerationfunnel.onrender.com']
+ALLOWED_HOSTS = env.list("DJANGO_ALLOWED_HOSTS", default=["127.0.0.1", "localhost"])
 
 # Directories
 TEMPLATES_DIR = BASE_DIR / "templates"
