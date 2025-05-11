@@ -43,22 +43,22 @@ def lead_create_view(request):
             lead.save()
 
             # Debugging the phone number
+            # Inside lead_create_view
             if lead.phone:
                 print(f"Sending WhatsApp message to {lead.phone}")  # Check phone number
 
-            # Sending email
             send_email_task.delay(
                 lead.email,
                 "Thank You for Your Interest",
                 "Thanks for your interest. Our team will follow up shortly."
             )
 
-            # Sending WhatsApp message if phone number is provided
             if lead.phone:
                 send_whatsapp_task.delay(
                     lead.phone,
-                    f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
-                )
+                    lead.name  # <- send name for the template
+                ) 
+                # Send WhatsApp message using the task  
 
             return redirect('lead_success')
     else:
@@ -97,10 +97,11 @@ def lead_success_view(request):
 # Send WhatsApp message to a single lead
 def send_whatsapp_message_view(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
+    # Inside send_whatsapp_message_view
     if lead.phone:
         send_whatsapp_task.delay(
             lead.phone,
-            f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
+            lead.name  # <- send name for the template
         )
     return redirect('lead_list')
 

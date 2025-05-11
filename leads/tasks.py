@@ -20,7 +20,7 @@ def send_email_task(email, subject, message):
     print(f"Email sent to {email}")
 
 @shared_task
-def send_whatsapp_task(phone_number, message):
+def send_whatsapp_task(phone_number, name):
     url = f"https://graph.facebook.com/v19.0/{settings.META_PHONE_NUMBER_ID}/messages"
     
     headers = {
@@ -31,8 +31,24 @@ def send_whatsapp_task(phone_number, message):
     payload = {
         "messaging_product": "whatsapp",
         "to": phone_number,
-        "type": "text",
-        "text": {"body": message}
+        "type": "template",
+        "template": {
+            "name": "account_creation",  # Replace with your approved template name
+            "language": {
+                "code": "en_US"  # Change to "hi" if the template is in Hindi
+            },
+            "components": [
+                {
+                    "type": "body",
+                    "parameters": [
+                        {
+                            "type": "text",
+                            "text": name
+                        }
+                    ]
+                }
+            ]
+        }
     }
 
     response = requests.post(url, headers=headers, data=json.dumps(payload))

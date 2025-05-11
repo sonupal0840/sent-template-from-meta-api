@@ -39,7 +39,11 @@
                         <!-- WhatsApp Button -->
                         <form method="post" action="{% url 'send_whatsapp_message' lead.id %}" style="display:inline;">
                             {% csrf_token %}
-                            <button type="submit" class="btn btn-success">📲 WhatsApp</button>
+                            <button type="submit" class="btn btn-success"><a href="https://wa.me/{{ lead.phone|urlencode }}?text=Hello%20{{ lead.name }},%20thank%20you%20for%20your%20interest!" 
+                                class="btn btn-success" 
+                                target="_blank">
+                                📲 WhatsApp
+                             </a></button>
                         </form>
 
                         <!-- Delete Button -->
