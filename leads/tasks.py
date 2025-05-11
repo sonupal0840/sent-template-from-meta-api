@@ -21,21 +21,33 @@ def send_email_task(email, subject, message):
 
 @shared_task
 def send_whatsapp_task(phone_number, name):
+    _send_whatsapp(phone_number, name)
+
+@shared_task
+def send_followup_whatsapp_task(phone_number, name, step):
+    message_suffix = {
+        2: "Here’s some more info you might find useful.",
+        3: "Final follow-up! Feel free to reply if you have any questions."
+    }
+    followup_text = f"{name}, {message_suffix.get(step, '')}"
+    _send_whatsapp(phone_number, followup_text)
+
+def _send_whatsapp(phone_number, name_or_text):
     url = f"https://graph.facebook.com/v19.0/{settings.META_PHONE_NUMBER_ID}/messages"
-    
+
     headers = {
         "Authorization": f"Bearer {settings.META_ACCESS_TOKEN}",
         "Content-Type": "application/json"
     }
-    
+
     payload = {
         "messaging_product": "whatsapp",
         "to": phone_number,
         "type": "template",
         "template": {
-            "name": "account_creation",  # Replace with your approved template name
+            "name": "account_creation",
             "language": {
-                "code": "en_US"  # Change to "hi" if the template is in Hindi
+                "code": "en_US"
             },
             "components": [
                 {
@@ -43,7 +55,7 @@ def send_whatsapp_task(phone_number, name):
                     "parameters": [
                         {
                             "type": "text",
-                            "text": name
+                            "text": name_or_text
                         }
                     ]
                 }

@@ -1,39 +1,49 @@
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q
 from django.http import HttpResponse
 from .models import Lead
 from .forms import LeadForm, LeadFilterForm
-from .tasks import send_email_task, send_whatsapp_task
+from .tasks import send_email_task, send_whatsapp_task, send_followup_whatsapp_task
 import pandas as pd
 
-# Home page: Lead creation view
-# def lead_create_view(request):
-#     if request.method == 'POST':
-#         form = LeadForm(request.POST)
-#         if form.is_valid():
-#             lead = form.save(commit=False)
-#             lead.compute_score_and_segment()
-#             lead.save()
+def lead_create_view(request):
+    if request.method == 'POST':
+        form = LeadForm(request.POST)
+        if form.is_valid():
+            lead = form.save(commit=False)
+            lead.compute_score_and_segment()
+            lead.save()
 
-#             send_email_task.delay(
-#                 lead.email,
-#                 "Thank You for Your Interest",
-#                 "Thanks for your interest. Our team will follow up shortly."
-#             )
-#             if lead.phone:
-#                 send_whatsapp_task.delay(
-#                     lead.phone,
-#                     f"Hi {lead.name}, thank you for your interest! Our team will get back to you shortly."
-#                 )
-#             return redirect('lead_success')
-#     else:
-#         form = LeadForm()
-#     return render(request, 'lead_form.html', {'form': form})
+            send_email_task.delay(
+                lead.email,
+                "Thank You for Your Interest",
+                "Thanks for your interest. Our team will follow up shortly."
+            )
 
+            if lead.phone:
+                # Send first message immediately
+                send_whatsapp_task.delay(lead.phone, lead.name)
 
+                # Send second message after 15 minutes
+                send_followup_whatsapp_task.apply_async(
+                    args=[lead.phone, lead.name, 2],
+                    countdown=900  # 15 minutes
+                )
 
+                # Send third message after 1 hour
+                send_followup_whatsapp_task.apply_async(
+                    args=[lead.phone, lead.name, 3],
+                    countdown=3600  # 60 minutes
+                )
+
+            return redirect('lead_success')
+    else:
+        form = LeadForm()
+    return render(request, 'lead_form.html', {'form': form})
+
+'''
+# Create a lead
 def lead_create_view(request):
     if request.method == 'POST':
         form = LeadForm(request.POST)
@@ -65,7 +75,7 @@ def lead_create_view(request):
         form = LeadForm()
     return render(request, 'lead_form.html', {'form': form})
 
-
+'''
 
 # Show all leads with search and pagination
 def lead_list(request):
