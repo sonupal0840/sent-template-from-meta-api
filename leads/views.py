@@ -155,3 +155,7 @@ def export_leads_csv(request):
     response['Content-Disposition'] = 'attachment; filename=filtered_leads.csv'
     df.to_csv(path_or_buf=response, index=False)
     return response
+
+
+def privacy_view(request):
+    return render(request, 'Privacy-policy.html')

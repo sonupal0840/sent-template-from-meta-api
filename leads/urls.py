@@ -4,7 +4,8 @@ from . import views
 urlpatterns = [
     path('', views.lead_create_view, name='home'),  
     path('success/', views.lead_success_view, name='lead_success'),  
-    path('report/', views.report_view, name='report'),  
+    path('report/', views.report_view, name='report'), 
+    path('Privacy-policy/', views.privacy_view, name='Privacy-policy'), 
     path('export-leads-csv/', views.export_leads_csv, name='export_leads_csv'),  
     path('leads/', views.lead_list, name='lead_list'),  
     path('delete/<int:lead_id>/', views.delete_lead, name='delete_lead'),
