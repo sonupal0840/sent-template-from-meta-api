@@ -126,12 +126,9 @@ def export_leads_csv(request):
 
 def privacy_view(request):
     return render(request, 'Privacy-policy.html')
-
 def whatsapp_webhook_view(request):
     if request.method == 'GET':
-        # Get the VERIFY TOKEN from settings (read from .env)
-        verify_token = getattr(settings, 'META_VERIFY_TOKEN', None)
-
+        verify_token = settings.META_VERIFY_TOKEN
         mode = request.GET.get('hub.mode')
         token = request.GET.get('hub.verify_token')
         challenge = request.GET.get('hub.challenge')
