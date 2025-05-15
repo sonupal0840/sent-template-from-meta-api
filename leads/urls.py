@@ -10,4 +10,6 @@ urlpatterns = [
     path('leads/', views.lead_list, name='lead_list'),  
     path('delete/<int:lead_id>/', views.delete_lead, name='delete_lead'),
     path('send-whatsapp/<int:pk>/', views.send_whatsapp_message_view, name='send_whatsapp_message'),
+    path('webhook/', views.whatsapp_webhook_view, name='whatsapp_webhook'),
+
 ]

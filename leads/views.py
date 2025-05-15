@@ -6,6 +6,7 @@ from .models import Lead
 from .forms import LeadForm, LeadFilterForm
 from .tasks import send_email_task, send_whatsapp_task, send_followup_whatsapp_task
 import pandas as pd
+from django.conf import settings
 
 def lead_create_view(request):
     if request.method == 'POST':
@@ -42,40 +43,6 @@ def lead_create_view(request):
         form = LeadForm()
     return render(request, 'lead_form.html', {'form': form})
 
-'''
-# Create a lead
-def lead_create_view(request):
-    if request.method == 'POST':
-        form = LeadForm(request.POST)
-        if form.is_valid():
-            lead = form.save(commit=False)
-            lead.compute_score_and_segment()
-            lead.save()
-
-            # Debugging the phone number
-            # Inside lead_create_view
-            if lead.phone:
-                print(f"Sending WhatsApp message to {lead.phone}")  # Check phone number
-
-            send_email_task.delay(
-                lead.email,
-                "Thank You for Your Interest",
-                "Thanks for your interest. Our team will follow up shortly."
-            )
-
-            if lead.phone:
-                send_whatsapp_task.delay(
-                    lead.phone,
-                    lead.name  # <- send name for the template
-                ) 
-                # Send WhatsApp message using the task  
-
-            return redirect('lead_success')
-    else:
-        form = LeadForm()
-    return render(request, 'lead_form.html', {'form': form})
-
-'''
 
 # Show all leads with search and pagination
 def lead_list(request):
@@ -159,3 +126,19 @@ def export_leads_csv(request):
 
 def privacy_view(request):
     return render(request, 'Privacy-policy.html')
+
+def whatsapp_webhook_view(request):
+    if request.method == 'GET':
+        # Get the VERIFY TOKEN from settings (read from .env)
+        verify_token = getattr(settings, 'META_VERIFY_TOKEN', None)
+
+        mode = request.GET.get('hub.mode')
+        token = request.GET.get('hub.verify_token')
+        challenge = request.GET.get('hub.challenge')
+
+        if mode and token:
+            if mode == 'subscribe' and token == verify_token:
+                return HttpResponse(challenge, status=200)
+            else:
+                return HttpResponse("Forbidden", status=403)
+    return HttpResponse("Bad Request", status=400)
