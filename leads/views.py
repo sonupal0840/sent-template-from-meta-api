@@ -19,13 +19,13 @@ def lead_create_view(request):
             lead.save()
 
             # Send email
-            send_mail(
-                subject="Thank You for Your Interest",
-                message="Thanks for your interest. Our team will follow up shortly.",
-                from_email=settings.EMAIL_HOST_USER,
-                recipient_list=[lead.email],
-                fail_silently=False,
-            )
+            # send_mail(
+            #     subject="Thank You for Your Interest",
+            #     message="Thanks for your interest. Our team will follow up shortly.",
+            #     from_email=settings.EMAIL_HOST_USER,
+            #     recipient_list=[lead.email],
+            #     fail_silently=False,
+            # )
 
             # Send WhatsApp
             if lead.phone:
