@@ -112,19 +112,19 @@ EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
 
 
-CELERY_BROKER_URL = env('CELERY_BROKER_URL')
-CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
-CELERY_ACCEPT_CONTENT = ['json']
-CELERY_TASK_SERIALIZER = 'json'
-CELERY_RESULT_SERIALIZER = 'json'
-CELERY_TIMEZONE = 'Asia/Kolkata'
+# CELERY_BROKER_URL = env('CELERY_BROKER_URL')
+# CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
+# CELERY_ACCEPT_CONTENT = ['json']
+# CELERY_TASK_SERIALIZER = 'json'
+# CELERY_RESULT_SERIALIZER = 'json'
+# CELERY_TIMEZONE = 'Asia/Kolkata'
 
-CELERY_BEAT_SCHEDULE = {
-    'send_daily_report': {
-        'task': 'leads.tasks.send_daily_report',
-        'schedule': env('DAILY_REPORT_SCHEDULE', default='@daily'),
-    },
-}
+# CELERY_BEAT_SCHEDULE = {
+#     'send_daily_report': {
+#         'task': 'leads.tasks.send_daily_report',
+#         'schedule': env('DAILY_REPORT_SCHEDULE', default='@daily'),
+#     },
+# }
 
 # WhatsApp API credentials
 META_ACCESS_TOKEN = env('META_ACCESS_TOKEN')
