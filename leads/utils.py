@@ -17,7 +17,7 @@ def send_followup_whatsapp(phone_number, name, step):
     followup_text = f"{name}, {message_suffix.get(step, '')}"
     _send_whatsapp(phone_number, followup_text)
 
-def _send_whatsapp(phone_number, body_text):
+def _send_whatsapp(phone_number, name):
     url = f"https://graph.facebook.com/v19.0/{settings.META_PHONE_NUMBER_ID}/messages"
 
     headers = {
@@ -30,20 +30,32 @@ def _send_whatsapp(phone_number, body_text):
         "to": phone_number,
         "type": "template",
         "template": {
-            "name": "account_creation_confirmation_3",  # Make sure this is your correct template name
+            "name": "account_creation",  # Your approved template name
             "language": {
                 "code": "en_US"
             },
             "components": [
                 {
+                    "type": "header",
+                    "parameters": [
+                        {
+                            "type": "video",
+                            "video": {
+                                "link": "https://leadgenerationfunnel.onrender.com/static/media/sample.mp4"
+                            }
+                        }
+                    ]
+                },
+                {
                     "type": "body",
                     "parameters": [
                         {
                             "type": "text",
-                            "text": body_text
+                            "text": name  # This fills the {{1}} in body
                         }
                     ]
                 }
+                # ❗ Do NOT include "button" component for static URL buttons defined in template
             ]
         }
     }
