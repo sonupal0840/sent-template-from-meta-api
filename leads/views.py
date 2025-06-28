@@ -6,10 +6,11 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Lead
 from .forms import LeadForm, LeadFilterForm
-from .utils import send_whatsapp, send_followup_whatsapp
+from .utils import send_whatsapp,upload_video_get_media_id
 import pandas as pd
-import threading  # ✅ added
+import threading ,os ,logging# ✅ added
 
+logger = logging.getLogger(__name__)
 def lead_create_view(request):
     if request.method == 'POST':
         form = LeadForm(request.POST)
@@ -18,22 +19,16 @@ def lead_create_view(request):
             lead.compute_score_and_segment()
             lead.save()
 
-            # Send email
-            # send_mail(
-            #     subject="Thank You for Your Interest",
-            #     message="Thanks for your interest. Our team will follow up shortly.",
-            #     from_email=settings.EMAIL_HOST_USER,
-            #     recipient_list=[lead.email],
-            #     fail_silently=False,
-            # )
+            # Set correct video path
+            video_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'whatsapp_ready.mp4')
+            media_id = upload_video_get_media_id(video_path)
 
-            # Send WhatsApp
-            if lead.phone:
-                send_whatsapp(lead.phone, lead.name)
-
-                # ✅ Delayed follow-ups using threading
-                threading.Timer(300, send_followup_whatsapp, args=(lead.phone, lead.name, 2)).start()     # after 5 mins
-                threading.Timer(3600, send_followup_whatsapp, args=(lead.phone, lead.name, 3)).start()    # after 1 hour
+            # Send WhatsApp only if phone and video are valid
+            if lead.phone and media_id:
+                send_whatsapp(lead.phone, media_id=media_id, name_param=lead.name)
+            else:
+                logger.warning("❌ WhatsApp not sent: Missing phone or media_id")
+                print("❌ WhatsApp not sent: Missing phone or media_id")
 
             return redirect('lead_success')
     else:
