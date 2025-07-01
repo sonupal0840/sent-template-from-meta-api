@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>WhatsApp Sessions</title>
+  <style>
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    h1 { margin-bottom: 20px; }
+    table { border-collapse: collapse; width: 100%; margin-top: 20px; }
+    th, td { padding: 10px; border: 1px solid #ccc; }
+    th { background-color: #f3f3f3; }
+    select, button {
+      padding: 8px 12px;
+      margin-right: 10px;
+    }
+  </style>
+</head>
+<body>
+  <h1>📱 WhatsApp Sessions</h1>
+
+  <form method="get">
+    <label for="filter">Filter by Time:</label>
+    <select name="filter" id="filter" onchange="this.form.submit()">
+      <option value="all" {% if selected == 'all' %}selected{% endif %}>All</option>
+      <option value="today" {% if selected == 'today' %}selected{% endif %}>Today</option>
+      <option value="7days" {% if selected == '7days' %}selected{% endif %}>Last 7 Days</option>
+      <option value="30days" {% if selected == '30days' %}selected{% endif %}>Last 30 Days</option>
+    </select>
+  </form>
+
+  <table>
+    <thead>
+      <tr>
+        <th>#</th>
+        <th>Phone Number</th>
+        <th>Last Message At</th>
+      </tr>
+    </thead>
+    <tbody>
+      {% for session in sessions %}
+        <tr>
+          <td>{{ forloop.counter }}</td>
+          <td>{{ session.phone }}</td>
+          <td>{{ session.last_message_at|date:"Y-m-d H:i:s" }}</td>
+        </tr>
+      {% empty %}
+        <tr>
+          <td colspan="3">No sessions found for selected filter.</td>
+        </tr>
+      {% endfor %}
+    </tbody>
+  </table>
+</body>
+</html>

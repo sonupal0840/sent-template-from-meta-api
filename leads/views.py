@@ -143,3 +143,30 @@ def whatsapp_webhook_view(request):
             handle_first_time_message(from_number, name)
 
         return HttpResponse("EVENT_RECEIVED", status=200)
+
+
+from django.utils.timezone import now
+from datetime import timedelta
+from django.db.models import Q
+
+def whatsapp_sessions_view(request):
+    filter_option = request.GET.get('filter', 'all')
+    sessions = WhatsAppSession.objects.all()
+
+    if filter_option == 'today':
+        today = now().date()
+        sessions = sessions.filter(last_message_at__date=today)
+
+    elif filter_option == '7days':
+        days_ago = now() - timedelta(days=7)
+        sessions = sessions.filter(last_message_at__gte=days_ago)
+
+    elif filter_option == '30days':
+        days_ago = now() - timedelta(days=30)
+        sessions = sessions.filter(last_message_at__gte=days_ago)
+
+    sessions = sessions.order_by('-last_message_at')
+    return render(request, 'whatsapp_sessions.html', {
+        'sessions': sessions,
+        'selected': filter_option
+    })

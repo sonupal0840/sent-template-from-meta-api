@@ -104,10 +104,13 @@ def handle_first_time_message(phone_number, name="User"):
 
 def schedule_followups(phone_number, name, media_id):
     try:
+        logger.info(f"⏱ Waiting 15 min for follow-up to {phone_number}")
         time.sleep(900)  # 15 mins
         send_whatsapp(phone_number, media_id=media_id, name_param=name)
+        logger.info(f"✅ 15-min follow-up sent to {phone_number}")
 
         time.sleep(2700)  # another 45 mins (total 1h)
         send_whatsapp(phone_number, media_id=media_id, name_param=name)
+        logger.info(f"✅ 1-hour follow-up sent to {phone_number}")
     except Exception as e:
         logger.error(f"❌ Error in follow-up: {str(e)}")
