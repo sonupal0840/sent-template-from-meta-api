@@ -4,17 +4,19 @@ from django.db.models import Q
 from django.http import HttpResponse
 from django.core.mail import send_mail
 from django.conf import settings
-from .models import Lead
+from .models import Lead, WhatsAppSession
 from .forms import LeadForm, LeadFilterForm
-from .utils import send_whatsapp,upload_video_get_media_id,handle_first_time_message
-import pandas as pd
-import threading ,os ,logging# ✅ added
-import json
+from .utils import send_whatsapp, upload_video_get_media_id, handle_first_time_message
 from django.views.decorators.csrf import csrf_exempt
-from django.utils.timezone import now
 from django.views.decorators.http import require_http_methods
+from django.utils.timezone import now
+import pandas as pd
+import os
+import logging
+import json
 
 logger = logging.getLogger(__name__)
+
 def lead_create_view(request):
     if request.method == 'POST':
         form = LeadForm(request.POST)
@@ -23,22 +25,18 @@ def lead_create_view(request):
             lead.compute_score_and_segment()
             lead.save()
 
-            # Set correct video path
             video_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'whatsapp_ready.mp4')
             media_id = upload_video_get_media_id(video_path)
 
-            # Send WhatsApp only if phone and video are valid
             if lead.phone and media_id:
                 send_whatsapp(lead.phone, media_id=media_id, name_param=lead.name)
             else:
                 logger.warning("❌ WhatsApp not sent: Missing phone or media_id")
-                print("❌ WhatsApp not sent: Missing phone or media_id")
 
             return redirect('lead_success')
     else:
         form = LeadForm()
     return render(request, 'lead_form.html', {'form': form})
-
 
 def lead_list(request):
     leads = Lead.objects.all()
@@ -54,7 +52,6 @@ def lead_list(request):
     page_obj = paginator.get_page(page_number)
     return render(request, 'lead_list.html', {'page_obj': page_obj})
 
-
 def delete_lead(request, lead_id):
     lead = get_object_or_404(Lead, id=lead_id)
     if request.method == 'POST':
@@ -62,17 +59,14 @@ def delete_lead(request, lead_id):
         return redirect('lead_list')
     return render(request, 'confirm_delete.html', {'lead': lead})
 
-
 def lead_success_view(request):
     return render(request, 'lead_success.html')
-
 
 def send_whatsapp_message_view(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
     if lead.phone:
-        send_whatsapp(lead.phone, lead.name)
+        send_whatsapp(lead.phone, name_param=lead.name)
     return redirect('lead_list')
-
 
 def report_view(request):
     leads = Lead.objects.all()
@@ -94,7 +88,6 @@ def report_view(request):
     page_obj = paginator.get_page(page_number)
     return render(request, 'report.html', {'page_obj': page_obj, 'form': form})
 
-
 def export_leads_csv(request):
     leads = Lead.objects.all()
     interest = request.GET.get('interest')
@@ -114,10 +107,8 @@ def export_leads_csv(request):
     df.to_csv(path_or_buf=response, index=False)
     return response
 
-
 def privacy_view(request):
     return render(request, 'Privacy-policy.html')
-
 
 @csrf_exempt
 @require_http_methods(["POST", "GET"])
@@ -145,11 +136,10 @@ def whatsapp_webhook_view(request):
         if messages:
             msg = messages[0]
             from_number = msg["from"]
-            text = msg.get("text", {}).get("body", "").lower()
             profile = value.get("contacts", [{}])[0].get("profile", {})
             name = profile.get("name", "User")
 
-            # Handle first-time inbound messages
+            # 🧠 Handle session & first-time messages inside utils
             handle_first_time_message(from_number, name)
 
         return HttpResponse("EVENT_RECEIVED", status=200)

@@ -2,11 +2,15 @@ import requests
 import json
 import os
 import logging
+import threading
+import time
 from django.conf import settings
+from .models import WhatsAppSession
+from django.utils.timezone import now
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-# ✅ Upload video and get media ID
 def upload_video_get_media_id(file_path):
     if not os.path.exists(file_path):
         logger.error(f"❌ Video file not found: {file_path}")
@@ -30,7 +34,7 @@ def upload_video_get_media_id(file_path):
             return response.json().get('id')
         return None
 
-# ✅ Send WhatsApp video template message
+
 def send_whatsapp(phone_number, media_id=None, name_param=None):
     url = f"https://graph.facebook.com/v19.0/{settings.META_PHONE_NUMBER_ID}/messages"
     headers = {
@@ -39,35 +43,29 @@ def send_whatsapp(phone_number, media_id=None, name_param=None):
     }
 
     template_data = {
-        "name": "confirmation_video",  # ✅ Match exact approved template name
+        "name": "confirmation_video",  # ✅ your approved template
         "language": {"code": "en_US"},
         "components": []
     }
 
-    # Add header component with video
     if media_id:
         template_data["components"].append({
             "type": "header",
-            "parameters": [
-                {
-                    "type": "video",
-                    "video": {
-                        "id": media_id
-                    }
+            "parameters": [{
+                "type": "video",
+                "video": {
+                    "id": media_id
                 }
-            ]
+            }]
         })
 
-    # Always add body parameter (fallback if missing)
     name_text = name_param or "User"
     template_data["components"].append({
         "type": "body",
-        "parameters": [
-            {
-                "type": "text",
-                "text": name_text
-            }
-        ]
+        "parameters": [{
+            "type": "text",
+            "text": name_text
+        }]
     })
 
     payload = {
@@ -79,21 +77,37 @@ def send_whatsapp(phone_number, media_id=None, name_param=None):
 
     try:
         response = requests.post(url, headers=headers, data=json.dumps(payload))
-        print(f"✅ WhatsApp sent to {phone_number}: {response.status_code} {response.text}")
-        logger.info(f"✅ WhatsApp response: {response.status_code} - {response.text}")
+        logger.info(f"✅ WhatsApp sent to {phone_number}: {response.status_code} {response.text}")
     except Exception as e:
-        logger.error(f"❌ Failed to send WhatsApp message: {str(e)}")
-        print(f"❌ Error sending WhatsApp: {str(e)}")
-# ____________________________________________________________________________
-
+        logger.error(f"❌ Failed to send WhatsApp: {str(e)}")
 
 
 def handle_first_time_message(phone_number, name="User"):
-    from .tasks import schedule_followup_messages
+    session, created = WhatsAppSession.objects.get_or_create(phone=phone_number)
 
-    # Trigger confirmation video + schedule next messages
-    video_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'whatsapp_ready.mp4')
-    media_id = upload_video_get_media_id(video_path)
-    if phone_number and media_id:
+    if created or now() - session.last_message_at > timedelta(hours=24):
+        video_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'whatsapp_ready.mp4')
+        media_id = upload_video_get_media_id(video_path)
+        if phone_number and media_id:
+            send_whatsapp(phone_number, media_id=media_id, name_param=name)
+
+            # ✅ schedule follow-up in background
+            thread = threading.Thread(
+                target=schedule_followups,
+                args=(phone_number, name, media_id)
+            )
+            thread.start()
+
+    session.last_message_at = now()
+    session.save()
+
+
+def schedule_followups(phone_number, name, media_id):
+    try:
+        time.sleep(900)  # 15 mins
         send_whatsapp(phone_number, media_id=media_id, name_param=name)
-        schedule_followup_messages(phone_number, name)
+
+        time.sleep(2700)  # another 45 mins (total 1h)
+        send_whatsapp(phone_number, media_id=media_id, name_param=name)
+    except Exception as e:
+        logger.error(f"❌ Error in follow-up: {str(e)}")

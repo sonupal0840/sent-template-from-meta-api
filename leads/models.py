@@ -2,6 +2,7 @@ from django.db import models
 from django.utils import timezone
 from django.core.exceptions import ValidationError
 import re
+from datetime import timedelta
 
 class Lead(models.Model):
     name = models.CharField(max_length=100)
@@ -13,21 +14,21 @@ class Lead(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        """Return the lead's name and segment in the admin or any representation."""
+        """Returns a string representation with name and segment."""
         return f"{self.name} ({self.segment})"
 
     def compute_score_and_segment(self):
         """
-        Computes the score based on interest keywords and assigns the segment.
-        Keywords:
-        - "buy"  → +50 points
-        - "demo" → +30 points
-        - "info" → +10 points
+        Assigns score based on keywords in interest.
+        Score Rules:
+        - 'buy'  → +50
+        - 'demo' → +30
+        - 'info' → +10
 
-        Segments:
-        - Hot   (score ≥ 50)
-        - Warm  (30 ≤ score < 50)
-        - Cold  (score < 30)
+        Segment Assignment:
+        - Hot  : score ≥ 50
+        - Warm : 30 ≤ score < 50
+        - Cold : score < 30
         """
         score = 0
         interest_lower = self.interest.lower()
@@ -49,12 +50,29 @@ class Lead(models.Model):
             self.segment = 'Cold'
 
     def clean(self):
-        """Custom phone number validation."""
+        """
+        Validates phone number format:
+        Must start with '+' followed by 10–15 digits.
+        """
         phone_pattern = re.compile(r'^\+\d{10,15}$')
         if not phone_pattern.match(self.phone):
             raise ValidationError("Phone number must be in the format +1234567890 (10–15 digits).")
 
     def save(self, *args, **kwargs):
-        """Override save to auto-calculate score and segment before saving."""
+        """Automatically compute score and segment on save."""
         self.compute_score_and_segment()
         super().save(*args, **kwargs)
+
+
+class WhatsAppSession(models.Model):
+    phone = models.CharField(max_length=20, unique=True)
+    last_message_at = models.DateTimeField(auto_now=True)
+
+    def is_session_active(self):
+        """
+        Returns True if the user has sent a message within the last 24 hours.
+        """
+        return timezone.now() - self.last_message_at < timedelta(hours=24)
+
+    def __str__(self):
+        return f"{self.phone} - Active: {self.is_session_active()}"
