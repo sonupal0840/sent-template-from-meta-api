@@ -6,9 +6,13 @@ from django.core.mail import send_mail
 from django.conf import settings
 from .models import Lead
 from .forms import LeadForm, LeadFilterForm
-from .utils import send_whatsapp,upload_video_get_media_id
+from .utils import send_whatsapp,upload_video_get_media_id,handle_first_time_message
 import pandas as pd
 import threading ,os ,logging# ✅ added
+import json
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.timezone import now
+from django.views.decorators.http import require_http_methods
 
 logger = logging.getLogger(__name__)
 def lead_create_view(request):
@@ -115,6 +119,8 @@ def privacy_view(request):
     return render(request, 'Privacy-policy.html')
 
 
+@csrf_exempt
+@require_http_methods(["POST", "GET"])
 def whatsapp_webhook_view(request):
     if request.method == 'GET':
         verify_token = settings.META_VERIFY_TOKEN
@@ -127,4 +133,23 @@ def whatsapp_webhook_view(request):
                 return HttpResponse(challenge, status=200)
             else:
                 return HttpResponse("Forbidden", status=403)
-    return HttpResponse("Bad Request", status=400)
+        return HttpResponse("Bad Request", status=400)
+
+    if request.method == 'POST':
+        data = json.loads(request.body.decode('utf-8'))
+        entry = data.get("entry", [])[0]
+        changes = entry.get("changes", [])[0]
+        value = changes.get("value", {})
+        messages = value.get("messages", [])
+
+        if messages:
+            msg = messages[0]
+            from_number = msg["from"]
+            text = msg.get("text", {}).get("body", "").lower()
+            profile = value.get("contacts", [{}])[0].get("profile", {})
+            name = profile.get("name", "User")
+
+            # Handle first-time inbound messages
+            handle_first_time_message(from_number, name)
+
+        return HttpResponse("EVENT_RECEIVED", status=200)
