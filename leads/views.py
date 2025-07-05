@@ -14,7 +14,7 @@ import pandas as pd
 import threading
 from threading import Thread
 
-from .models import Lead, WhatsAppSession
+from .models import Lead, WhatsAppSession,MessageLog
 from .forms import LeadForm, LeadFilterForm
 from .utils import (
     send_whatsapp,
@@ -212,6 +212,7 @@ def trigger_bulk_whatsapp(request):
     return JsonResponse({"error": "Invalid request method"}, status=405)
 
 # ✅ Template Message Trigger
+
 @csrf_exempt
 def trigger_template_message(request):
     if request.method != "POST":
@@ -236,12 +237,53 @@ def trigger_template_message(request):
             if media_id:
                 media_payload = {"type": media_type, "media_id": media_id}
 
-        Thread(
-            target=send_template_message_to_numbers,
-            args=(template_name, numbers, variables, language, media_payload)
-        ).start()
+        filtered_numbers = []
+        filtered_variables = {}
 
-        return JsonResponse({"status": f"Template message sending started to {len(numbers)} numbers"}, status=200)
+        for number in numbers:
+            # ✅ Only check duplicates if template_name is "status_updated"
+            if template_name == "status_updated":
+                already_sent = MessageLog.objects.filter(
+                    phone=number,
+                    template_type=template_name,
+                    status="sent"
+                ).exists()
+                if already_sent:
+                    continue  # Skip this number if already sent
+
+            filtered_numbers.append(number)
+            filtered_variables[number] = variables.get(number, {"1": "User"})
+
+        def send_to_all():
+            for phone in filtered_numbers:
+                try:
+                    send_template_message_to_numbers(
+                        template_name=template_name,
+                        numbers=[phone],
+                        variables=filtered_variables.get(phone, {"1": "User"}),
+                        language=language,
+                        media_payload=media_payload
+                    )
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=filtered_variables.get(phone, {}).get("1", ""),
+                        template_type=template_name,
+                        status='sent'
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to send to {phone}: {str(e)}")
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=filtered_variables.get(phone, {}).get("1", ""),
+                        template_type=template_name,
+                        status='failed'
+                    )
+
+        if filtered_numbers:
+            Thread(target=send_to_all).start()
+            return JsonResponse({"status": f"Started sending to {len(filtered_numbers)} numbers"}, status=200)
+        else:
+            return JsonResponse({"status": "No new numbers to send"}, status=200)
 
     except Exception as e:
         logger.exception("Template sending error")
@@ -262,3 +304,100 @@ def get_templates_from_meta(request):
         templates = [tmpl['name'] for tmpl in res.json().get('data', [])]
         return JsonResponse({'templates': templates})
     return JsonResponse({'error': 'Failed to fetch templates'}, status=400)
+
+
+
+def automated_template_from_api(request):
+    """
+    API View that auto-fetches contact list from external API,
+    sends 'status_updated' template with rejected.jpg image,
+    but only to those who haven't received it yet.
+    """
+    try:
+        # Step 1: Fetch contact list from external API
+        api_url = "https://yourdomain.com/api/leads/"  # 🔁 Replace with your real API endpoint
+        response = requests.get(api_url, timeout=10)
+
+        if response.status_code != 200:
+            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+
+        contacts = response.json()  # Expected: [{"phone": "...", "name": "..."}, ...]
+
+
+        if not contacts:
+            return JsonResponse({"error": "No contacts found in API response"}, status=400)
+
+        # Step 2: Upload local media file (rejected.jpg)
+        image_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'rejected.jpg')
+        if not os.path.exists(image_path):
+            return JsonResponse({"error": "Image file not found"}, status=400)
+
+        with open(image_path, 'rb') as image_file:
+            media_id = upload_file_get_media_id(image_file, media_type='image')
+
+        if not media_id:
+            return JsonResponse({"error": "Failed to upload image to Meta"}, status=500)
+
+        # Step 3: Prepare numbers & variables (with duplicate check)
+        numbers = []
+        variables_dict = {}
+
+        for contact in contacts:
+            phone = contact.get("phone")
+            name = contact.get("name", "User")
+
+            if not phone:
+                continue
+
+            # ✅ Check if already sent
+            already_sent = MessageLog.objects.filter(
+                phone=phone, template_type='status_updated', status='sent'
+            ).exists()
+
+            if already_sent:
+                logger.info(f"⏩ Skipping {phone} (already sent)")
+                continue
+
+            numbers.append(phone)
+            variables_dict[phone] = {"1": name}
+
+        # Step 4: Define threaded sender function
+        def send_to_all():
+            for phone in numbers:
+                variables = variables_dict.get(phone, {"1": "User"})
+
+                try:
+                    send_template_message_to_numbers(
+                        template_name='status_updated',
+                        numbers=[phone],
+                        variables=variables,
+                        language="en_US",
+                        media_payload={"type": "image", "media_id": media_id}
+                    )
+
+                    # ✅ Log message as sent
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=variables.get("1", "User"),
+                        template_type='status_updated',
+                        status='sent'
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to send to {phone}: {str(e)}")
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=variables.get("1", "User"),
+                        template_type='status_updated',
+                        status='failed'
+                    )
+
+        # Step 5: Background thread
+        if numbers:
+            Thread(target=send_to_all).start()
+            return JsonResponse({"status": f"Started sending to {len(numbers)} new contacts"}, status=200)
+        else:
+            return JsonResponse({"status": "No new contacts to send"}, status=200)
+
+    except Exception as e:
+        logger.exception("❌ Error in automated_template_from_api")
+        return JsonResponse({"error": str(e)}, status=500)

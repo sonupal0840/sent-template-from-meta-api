@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'leads',
     'django.contrib.sites',
-    'django_celery_beat',
+    # 'django_celery_beat',
 ]
 
 SITE_ID = 1

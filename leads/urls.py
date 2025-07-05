@@ -17,5 +17,6 @@ urlpatterns = [
     path('trigger-template/', views.trigger_template_message, name='trigger_template_message'),
     path('template/', views.send_template_test_page, name='test_template_form'),
     path("api/templates/", views.get_templates_from_meta, name="get_templates"),
+    path("send-template-api/", views.automated_template_from_api, name="automated_template_api"),
 
 ]

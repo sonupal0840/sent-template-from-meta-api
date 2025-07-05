@@ -71,6 +71,7 @@ class MessageLog(models.Model):
         ('initial', 'Initial'),
         ('followup1', '15-min Follow-up'),
         ('followup2', '1-hour Follow-up'),
+        ('status_updated', 'Status Updated') 
     ]
 
     phone = models.CharField(max_length=20)
