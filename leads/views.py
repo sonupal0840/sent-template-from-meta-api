@@ -1,21 +1,35 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.core.paginator import Paginator
 from django.db.models import Q
-from django.http import HttpResponse
-from django.core.mail import send_mail
+from django.http import HttpResponse, JsonResponse
 from django.conf import settings
-from .models import Lead, WhatsAppSession
-from .forms import LeadForm, LeadFilterForm
-from .utils import send_whatsapp, upload_video_get_media_id, handle_first_time_message
 from django.views.decorators.csrf import csrf_exempt
 from django.views.decorators.http import require_http_methods
 from django.utils.timezone import now
-import pandas as pd
-import os
+from datetime import timedelta
+import json, requests
 import logging
-import json
+import os
+import pandas as pd
+import threading
+from threading import Thread
+
+from .models import Lead, WhatsAppSession
+from .forms import LeadForm, LeadFilterForm
+from .utils import (
+    send_whatsapp,
+    upload_video_get_media_id,
+    handle_first_time_message,
+    send_bulk_whatsapp_utility,
+    send_template_message_to_numbers,
+    upload_file_get_media_id
+)
 
 logger = logging.getLogger(__name__)
+
+# ----------------------------------------
+# ✅ Lead Views
+# ----------------------------------------
 
 def lead_create_view(request):
     if request.method == 'POST':
@@ -27,6 +41,8 @@ def lead_create_view(request):
 
             video_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'whatsapp_ready.mp4')
             media_id = upload_video_get_media_id(video_path)
+            logger.info(f"📞 Phone: {lead.phone}, 🎬 Media ID: {media_id}")
+
 
             if lead.phone and media_id:
                 send_whatsapp(lead.phone, media_id=media_id, name_param=lead.name)
@@ -62,11 +78,19 @@ def delete_lead(request, lead_id):
 def lead_success_view(request):
     return render(request, 'lead_success.html')
 
+def privacy_view(request):
+    return render(request, 'Privacy-policy.html')
+
+
 def send_whatsapp_message_view(request, pk):
     lead = get_object_or_404(Lead, pk=pk)
     if lead.phone:
         send_whatsapp(lead.phone, name_param=lead.name)
     return redirect('lead_list')
+
+# ----------------------------------------
+# ✅ Reports & Export
+# ----------------------------------------
 
 def report_view(request):
     leads = Lead.objects.all()
@@ -107,8 +131,9 @@ def export_leads_csv(request):
     df.to_csv(path_or_buf=response, index=False)
     return response
 
-def privacy_view(request):
-    return render(request, 'Privacy-policy.html')
+# ----------------------------------------
+# ✅ WhatsApp Webhook
+# ----------------------------------------
 
 @csrf_exempt
 @require_http_methods(["POST", "GET"])
@@ -139,34 +164,101 @@ def whatsapp_webhook_view(request):
             profile = value.get("contacts", [{}])[0].get("profile", {})
             name = profile.get("name", "User")
 
-            # 🧠 Handle session & first-time messages inside utils
             handle_first_time_message(from_number, name)
 
         return HttpResponse("EVENT_RECEIVED", status=200)
 
-
-from django.utils.timezone import now
-from datetime import timedelta
-from django.db.models import Q
+# ----------------------------------------
+# ✅ WhatsApp Session History View
+# ----------------------------------------
 
 def whatsapp_sessions_view(request):
     filter_option = request.GET.get('filter', 'all')
     sessions = WhatsAppSession.objects.all()
 
     if filter_option == 'today':
-        today = now().date()
-        sessions = sessions.filter(last_message_at__date=today)
-
+        sessions = sessions.filter(last_message_at__date=now().date())
     elif filter_option == '7days':
-        days_ago = now() - timedelta(days=7)
-        sessions = sessions.filter(last_message_at__gte=days_ago)
-
+        sessions = sessions.filter(last_message_at__gte=now() - timedelta(days=7))
     elif filter_option == '30days':
-        days_ago = now() - timedelta(days=30)
-        sessions = sessions.filter(last_message_at__gte=days_ago)
+        sessions = sessions.filter(last_message_at__gte=now() - timedelta(days=30))
 
     sessions = sessions.order_by('-last_message_at')
     return render(request, 'whatsapp_sessions.html', {
         'sessions': sessions,
         'selected': filter_option
     })
+
+# ----------------------------------------
+# ✅ API: Bulk Text Message Trigger
+# ----------------------------------------
+# ✅ Bulk Text Message Trigger
+@csrf_exempt
+def trigger_bulk_whatsapp(request):
+    if request.method == "POST":
+        try:
+            data = json.loads(request.body.decode("utf-8"))
+            numbers = data.get("numbers", [])
+            message = data.get("message", "Hello from CyberTechZone Funnel")
+
+            if not numbers or not isinstance(numbers, list):
+                return JsonResponse({"error": "Invalid phone numbers"}, status=400)
+
+            Thread(target=send_bulk_whatsapp_utility, args=(numbers, message)).start()
+            return JsonResponse({"status": "Bulk messaging initiated"}, status=200)
+        except Exception as e:
+            logger.error(f"[API] Bulk message error: {str(e)}")
+            return JsonResponse({"error": str(e)}, status=500)
+    return JsonResponse({"error": "Invalid request method"}, status=405)
+
+# ✅ Template Message Trigger
+@csrf_exempt
+def trigger_template_message(request):
+    if request.method != "POST":
+        return JsonResponse({"error": "Invalid request method"}, status=405)
+
+    try:
+        data = request.POST if request.content_type.startswith("multipart") else json.loads(request.body)
+
+        template_name = data.get("template_name")
+        language = data.get("language", "en_US")
+        media_type = data.get("media_type")
+        variables = json.loads(data.get("variables", "{}")) if isinstance(data.get("variables"), str) else data.get("variables", {})
+        numbers = json.loads(data.get("numbers", "[]")) if isinstance(data.get("numbers"), str) else data.get("numbers", [])
+
+        if not template_name or not numbers:
+            return JsonResponse({"error": "Missing template or numbers"}, status=400)
+
+        media_payload = None
+        media_file = request.FILES.get("media_file") if hasattr(request, 'FILES') else None
+        if media_file and media_type:
+            media_id = upload_file_get_media_id(media_file, media_type)
+            if media_id:
+                media_payload = {"type": media_type, "media_id": media_id}
+
+        Thread(
+            target=send_template_message_to_numbers,
+            args=(template_name, numbers, variables, language, media_payload)
+        ).start()
+
+        return JsonResponse({"status": f"Template message sending started to {len(numbers)} numbers"}, status=200)
+
+    except Exception as e:
+        logger.exception("Template sending error")
+        return JsonResponse({"error": str(e)}, status=500)
+
+# ✅ Test Page and Templates Fetch
+def whatsapp_session_page(request):
+    return render(request, 'whatsapp_session.html')
+
+def send_template_test_page(request):
+    return render(request, 'send_template.html')
+
+def get_templates_from_meta(request):
+    url = f"https://graph.facebook.com/v19.0/{settings.META_WABA_ID}/message_templates"
+    headers = {"Authorization": f"Bearer {settings.META_ACCESS_TOKEN}"}
+    res = requests.get(url, headers=headers)
+    if res.status_code == 200:
+        templates = [tmpl['name'] for tmpl in res.json().get('data', [])]
+        return JsonResponse({'templates': templates})
+    return JsonResponse({'error': 'Failed to fetch templates'}, status=400)

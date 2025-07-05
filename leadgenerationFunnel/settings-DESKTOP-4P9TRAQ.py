@@ -27,7 +27,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'leads',
     'django.contrib.sites',
-    'django_celery_beat',
+    # ❌ Removed 'django_celery_beat'
 ]
 
 SITE_ID = 1
@@ -107,29 +107,7 @@ EMAIL_USE_TLS = True
 EMAIL_HOST_USER = env('EMAIL_HOST_USER')
 EMAIL_HOST_PASSWORD = env('EMAIL_HOST_PASSWORD')
 
-# Celery settings
-
-
-
-
-# CELERY_BROKER_URL = env('CELERY_BROKER_URL')
-# CELERY_RESULT_BACKEND = env('CELERY_RESULT_BACKEND')
-# CELERY_ACCEPT_CONTENT = ['json']
-# CELERY_TASK_SERIALIZER = 'json'
-# CELERY_RESULT_SERIALIZER = 'json'
-# CELERY_TIMEZONE = 'Asia/Kolkata'
-
-# CELERY_BEAT_SCHEDULE = {
-#     'send_daily_report': {
-#         'task': 'leads.tasks.send_daily_report',
-#         'schedule': env('DAILY_REPORT_SCHEDULE', default='@daily'),
-#     },
-# }
-
 # WhatsApp API credentials
 META_ACCESS_TOKEN = env('META_ACCESS_TOKEN')
 META_PHONE_NUMBER_ID = env('META_PHONE_NUMBER_ID')
-META_WABA_ID = env('META_WABA_ID')
-
 META_VERIFY_TOKEN = env('META_VERIFY_TOKEN')
-

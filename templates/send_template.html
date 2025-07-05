@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Send WhatsApp Template</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: #f5f7fa;
+      padding: 20px;
+      color: #333;
+    }
+
+    h2 {
+      color: #2c3e50;
+      text-align: center;
+      margin-bottom: 30px;
+    }
+
+    form {
+      background: #ffffff;
+      max-width: 600px;
+      margin: 0 auto;
+      padding: 25px 30px;
+      border-radius: 10px;
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+    }
+
+    label {
+      font-weight: 600;
+      margin-top: 15px;
+      display: block;
+      color: #444;
+    }
+
+    select, input[type="text"], input[type="number"], textarea, input[type="file"] {
+      width: 100%;
+      padding: 10px;
+      margin-top: 5px;
+      border: 1px solid #ccc;
+      border-radius: 6px;
+      font-size: 14px;
+      box-sizing: border-box;
+    }
+
+    button {
+      background-color: #2ecc71;
+      color: white;
+      padding: 12px 20px;
+      border: none;
+      border-radius: 6px;
+      cursor: pointer;
+      font-size: 15px;
+      margin-top: 20px;
+      transition: background-color 0.3s ease;
+    }
+
+    button:hover {
+      background-color: #27ae60;
+    }
+
+    #variableFields {
+      margin-top: 10px;
+    }
+
+    #response {
+      text-align: center;
+      font-weight: bold;
+      font-size: 16px;
+    }
+
+    textarea {
+      resize: vertical;
+    }
+  </style>
+
+</head>
+<body>
+  <h2>Send WhatsApp Template Message</h2>
+
+  <form id="templateForm">
+    <label>Select Template:</label>
+    <select id="template_name" name="template_name" required>
+      <option value="">-- loading templates... --</option>
+    </select>
+
+    <label>Language Code:</label>
+    <input type="text" id="language" value="en_US" />
+
+    <label>Phone Numbers (comma-separated):</label>
+    <textarea id="numbers" rows="4" cols="50" placeholder="e.g. 919999999999,918888888888"></textarea>
+
+    <label>Number of Variables:</label>
+    <input type="number" id="var_count" min="1" value="1" required />
+    <button type="button" onclick="generateFields()">Generate Fields</button>
+
+    <div id="variableFields"></div>
+
+    <label>Media Type (optional):</label>
+    <select id="media_type">
+      <option value="">-- none --</option>
+      <option value="image">Image</option>
+      <option value="video">Video</option>
+      <option value="document">Document</option>
+    </select>
+
+    <label>Upload Media File:</label>
+    <input type="file" id="media_file" />
+
+    <label>Import from API (optional):</label>
+    <input type="url" id="import_api" placeholder="https://yourdomain.com/api/users" />
+    <button type="button" onclick="importUserData()">Import</button>
+
+    <input type="hidden" id="user_data_json" name="user_data_json" />
+
+    <button type="submit">Send Template</button>
+  </form>
+
+  <p id="response"></p>
+
+  {% verbatim %}
+  <script>
+    // Load templates on page load
+    window.addEventListener('DOMContentLoaded', async () => {
+      const dropdown = document.getElementById('template_name');
+      try {
+        const res = await fetch('/api/templates/');
+        const data = await res.json();
+        dropdown.innerHTML = '<option value="">-- select template --</option>';
+        (data.templates || []).forEach(tmpl => {
+          const option = document.createElement('option');
+          option.value = tmpl;
+          option.text = tmpl;
+          dropdown.appendChild(option);
+        });
+      } catch (err) {
+        dropdown.innerHTML = '<option value="">❌ Failed to load</option>';
+      }
+    });
+
+    function generateFields() {
+      const count = parseInt(document.getElementById('var_count').value);
+      const container = document.getElementById('variableFields');
+      container.innerHTML = '';
+      for (let i = 1; i <= count; i++) {
+        const label = document.createElement('label');
+        label.innerText = `Variable {{${i}}}:`;
+        const input = document.createElement('input');
+        input.type = 'text';
+        input.id = `var${i}`;
+        input.placeholder = `Value for {{${i}}}`;
+        input.required = true;
+        container.appendChild(label);
+        container.appendChild(input);
+      }
+    }
+
+    async function importUserData() {
+      const url = document.getElementById('import_api').value;
+      if (!url) return alert("Please enter an API URL");
+      try {
+        const res = await fetch(url);
+        const users = await res.json();
+        if (!Array.isArray(users)) throw new Error("Invalid API response format");
+        document.getElementById('user_data_json').value = JSON.stringify(users);
+        alert(`✅ Imported ${users.length} users`);
+      } catch (err) {
+        alert("❌ Failed to import users: " + err.message);
+      }
+    }
+
+    document.getElementById('templateForm').addEventListener('submit', async function (e) {
+      e.preventDefault();
+      const formData = new FormData();
+      formData.append("template_name", document.getElementById('template_name').value);
+      formData.append("language", document.getElementById('language').value);
+      formData.append("numbers", JSON.stringify(document.getElementById('numbers').value.split(',').map(x => x.trim())));
+
+      const variableInputs = document.querySelectorAll('#variableFields input');
+      const variables = {};
+      variableInputs.forEach((input, index) => {
+        variables[(index + 1).toString()] = input.value.trim();
+      });
+      formData.append("variables", JSON.stringify(variables));
+
+      const mediaFile = document.getElementById("media_file").files[0];
+      const mediaType = document.getElementById("media_type").value;
+      if (mediaFile && mediaType) {
+        formData.append("media_type", mediaType);
+        formData.append("media_file", mediaFile);
+      }
+
+      const userDataJson = document.getElementById("user_data_json").value;
+      if (userDataJson) {
+        formData.append("user_data_json", userDataJson);
+      }
+
+      const responseBox = document.getElementById('response');
+      responseBox.style.color = "black";
+      responseBox.innerText = "⏳ Sending...";
+
+      try {
+        const res = await fetch('/trigger-template/', {
+          method: 'POST',
+          body: formData
+        });
+        const data = await res.json();
+        if (res.ok) {
+          responseBox.style.color = "green";
+          responseBox.innerText = "✅ " + data.status;
+        } else {
+          responseBox.style.color = "red";
+          responseBox.innerText = "❌ " + (data.error || 'Something went wrong');
+        }
+      } catch (err) {
+        responseBox.style.color = "red";
+        responseBox.innerText = "❌ Error: " + err.message;
+      }
+    });
+  </script>
+  {% endverbatim %}
+</body>
+</html>

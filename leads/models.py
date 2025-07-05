@@ -4,6 +4,9 @@ from django.core.exceptions import ValidationError
 import re
 from datetime import timedelta
 
+# ------------------------------
+# ✅ 1. Lead Model
+# ------------------------------
 class Lead(models.Model):
     name = models.CharField(max_length=100)
     email = models.EmailField()
@@ -14,22 +17,9 @@ class Lead(models.Model):
     timestamp = models.DateTimeField(default=timezone.now)
 
     def __str__(self):
-        """Returns a string representation with name and segment."""
         return f"{self.name} ({self.segment})"
 
     def compute_score_and_segment(self):
-        """
-        Assigns score based on keywords in interest.
-        Score Rules:
-        - 'buy'  → +50
-        - 'demo' → +30
-        - 'info' → +10
-
-        Segment Assignment:
-        - Hot  : score ≥ 50
-        - Warm : 30 ≤ score < 50
-        - Cold : score < 30
-        """
         score = 0
         interest_lower = self.interest.lower()
 
@@ -50,29 +40,44 @@ class Lead(models.Model):
             self.segment = 'Cold'
 
     def clean(self):
-        """
-        Validates phone number format:
-        Must start with '+' followed by 10–15 digits.
-        """
         phone_pattern = re.compile(r'^\+\d{10,15}$')
         if not phone_pattern.match(self.phone):
             raise ValidationError("Phone number must be in the format +1234567890 (10–15 digits).")
 
     def save(self, *args, **kwargs):
-        """Automatically compute score and segment on save."""
         self.compute_score_and_segment()
         super().save(*args, **kwargs)
 
 
+# ------------------------------
+# ✅ 2. WhatsApp Session Tracking
+# ------------------------------
 class WhatsAppSession(models.Model):
     phone = models.CharField(max_length=20, unique=True)
     last_message_at = models.DateTimeField(auto_now=True)
 
     def is_session_active(self):
-        """
-        Returns True if the user has sent a message within the last 24 hours.
-        """
         return timezone.now() - self.last_message_at < timedelta(hours=24)
 
     def __str__(self):
         return f"{self.phone} - Active: {self.is_session_active()}"
+
+
+# ------------------------------
+# ✅ 3. Message Log
+# ------------------------------
+class MessageLog(models.Model):
+    MESSAGE_TYPES = [
+        ('initial', 'Initial'),
+        ('followup1', '15-min Follow-up'),
+        ('followup2', '1-hour Follow-up'),
+    ]
+
+    phone = models.CharField(max_length=20)
+    name = models.CharField(max_length=100, blank=True)
+    template_type = models.CharField(max_length=20, choices=MESSAGE_TYPES)
+    status = models.CharField(max_length=10)  # sent or failed
+    timestamp = models.DateTimeField(default=timezone.now)
+
+    def __str__(self):
+        return f"{self.phone} - {self.template_type} - {self.status}"
