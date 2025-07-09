@@ -19,6 +19,6 @@ from django.urls import path, include
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path('', include('leads.urls')),
-    path("api/sent-template/", include("senttemplate.urls")),
+    # path('', include('leads.urls')),
+    path("/", include("senttemplate.urls")),
 ]
