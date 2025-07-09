@@ -25,7 +25,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'leads',
+    # 'leads',
     'senttemplate',
     'django.contrib.sites',
     # 'django_celery_beat',
