@@ -2,6 +2,7 @@ from pathlib import Path
 import os
 import environ
 
+
 # Initialize environment variables
 BASE_DIR = Path(__file__).resolve().parent.parent
 env = environ.Env()
@@ -73,16 +74,33 @@ WSGI_APPLICATION = 'leadgenerationFunnel.wsgi.application'
 #     }
 # }
 
-DATABASES = {
-    'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': env('DB_NAME'),
-        'USER': env('DB_USER'),
-        'PASSWORD': env('DB_PASSWORD'),
-        'HOST': env('DB_HOST'),
-        'PORT': env('DB_PORT', default='5432'),
+
+if DEBUG:
+    # Local development database
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'CyberTechZone',
+            'USER': 'postgres',
+            'PASSWORD': 'Sonu@123',
+            'HOST': 'localhost',
+            'PORT': '5432',
+        }
     }
-}
+else:
+    # Production Render PostgreSQL
+    DATABASES = {
+        'default': {
+            'ENGINE': 'django.db.backends.postgresql',
+            'NAME': 'cybertechzone',
+            'USER': 'cybertechzone_user',
+            'PASSWORD': '5a0hkUx6hpMzR0SD6su4jeGky7IoTNpd',
+            'HOST': 'dpg-d1ov8her433s73cq5460-a.oregon-postgres.render.com',
+            'PORT': '5432',
+        }
+    }
+
+
 
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
