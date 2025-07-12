@@ -91,12 +91,12 @@ else:
     # Production Render PostgreSQL
     DATABASES = {
         'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'cybertechzone',
-            'USER': 'cybertechzone_user',
-            'PASSWORD': '5a0hkUx6hpMzR0SD6su4jeGky7IoTNpd',
-            'HOST': 'dpg-d1ov8her433s73cq5460-a.oregon-postgres.render.com',
-            'PORT': '5432',
+'ENGINE': 'django.db.backends.postgresql',
+            'NAME': env('DB_NAME'),
+            'USER': env('DB_USER'),
+            'PASSWORD': env('DB_PASSWORD'),
+            'HOST': env('DB_HOST'),
+            'PORT': env('DB_PORT', default='5432'),
         }
     }
 
