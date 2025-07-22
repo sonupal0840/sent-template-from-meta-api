@@ -2,6 +2,7 @@ import json
 import logging
 import os
 import requests
+from datetime import datetime, date
 from django.conf import settings
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
@@ -11,6 +12,8 @@ from .utils import upload_file_get_media_id, send_template_message_to_numbers
 from senttemplate.models import MessageLog
 
 logger = logging.getLogger(__name__)
+last_sent_date = None  # 🧠 Track last sent date to avoid duplicates
+
 
 @csrf_exempt
 @require_POST
@@ -97,16 +100,26 @@ def get_templates_from_meta(request):
 
 
 def automated_template_from_api(request):
+    global last_sent_date
+
+    now = datetime.now()
+    current_time = now.strftime("%H:%M")
+
+    # ⏰ Only allow at 12:30 AM
+    if current_time != "01:30":
+        return JsonResponse({"status": f"⏳ Not time yet — current time: {current_time}"}, status=200)
+
+    # 🛑 Already sent today
+    if last_sent_date == date.today():
+        return JsonResponse({"status": "✅ Message already sent today"}, status=200)
+
     try:
-        api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
-        response = requests.get(api_url, timeout=10)
+        # You can use this to fetch real contacts from API
+        # response = requests.get('https://callapi.sherlockslife.com/api/Values/contacts/', timeout=10)
+        # contacts = response.json() if response.status_code == 200 else []
 
-        if response.status_code != 200:
-            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+        contacts = [{'phone': 8989512905, 'name': 'sonu'}]  # For testing fallback
 
-        contacts = response.json()
-        print(contacts)
-        # contacts = [{'phone':8989512905,'name':'sonu'}]
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
 
@@ -130,7 +143,9 @@ def automated_template_from_api(request):
                 continue
 
             already_sent = MessageLog.objects.filter(
-                phone=phone, template_type='status_updated', status='sent'
+                phone=phone,
+                template_type='status_updated',
+                status='sent'
             ).exists()
             if already_sent:
                 continue
@@ -166,7 +181,8 @@ def automated_template_from_api(request):
 
         if numbers:
             Thread(target=send_to_all).start()
-            return JsonResponse({"status": f"Started sending to {len(numbers)} new contacts"}, status=200)
+            last_sent_date = date.today()
+            return JsonResponse({"status": f"📤 Started sending to {len(numbers)} new contacts"}, status=200)
         else:
             return JsonResponse({"status": "No new contacts to send"}, status=200)
 

@@ -1,6 +1,9 @@
 import logging
 import requests
 from django.conf import settings
+import threading
+import time
+from datetime import datetime
 
 logger = logging.getLogger(__name__)
 
@@ -79,3 +82,4 @@ def send_template_message_to_numbers(template_name, numbers, variables, language
             logger.info(f"[TEMPLATE] ✅ Sent to {number}: {res.status_code} {res.text}")
         except Exception as e:
             logger.error(f"[TEMPLATE] ❌ Failed to send to {number}: {str(e)}")
+
