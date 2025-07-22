@@ -115,10 +115,10 @@ def automated_template_from_api(request):
 
     try:
         # You can use this to fetch real contacts from API
-        # response = requests.get('https://callapi.sherlockslife.com/api/Values/contacts/', timeout=10)
-        # contacts = response.json() if response.status_code == 200 else []
+        response = requests.get('https://callapi.sherlockslife.com/api/Values/contacts/', timeout=10)
+        contacts = response.json() if response.status_code == 200 else []
 
-        contacts = [{'phone': 8989512905, 'name': 'sonu'}]  # For testing fallback
+        # contacts = [{'phone': 8989512905, 'name': 'sonu'}]  # For testing fallback
 
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
