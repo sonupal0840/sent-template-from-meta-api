@@ -1,9 +1,6 @@
 from django.apps import AppConfig
-from django.apps import AppConfig
-import threading, time
-from django.utils.timezone import now
-from django.db import connection
-from .models import MessageLog
+
+
 from .utils import send_whatsapp
 
 class LeadsConfig(AppConfig):
@@ -11,6 +8,10 @@ class LeadsConfig(AppConfig):
     name = 'leads'
 
     def ready(self):
+        from .models import MessageLog
+        import threading, time
+        from django.utils.timezone import now
+        from django.db import connection
         def process_scheduled_followups():
             while True:
                 try:
