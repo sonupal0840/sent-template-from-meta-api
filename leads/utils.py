@@ -213,17 +213,28 @@ def handle_first_time_message(phone_number, name="User"):
 # ----------------------------------------
 def schedule_followups(phone_number, name, media_id):
     try:
-        Timer(900, send_whatsapp, args=[phone_number], kwargs={
-            "media_id": media_id, "name_param": name, "template_type": "followup1"
-        }).start()
-        logger.info(f"🕒 15-min follow-up scheduled for {phone_number}")
+        MessageLog.objects.create(
+            phone=phone_number,
+            name=name,
+            template_type='followup1',
+            status='pending',
+            media_id=media_id,
+            scheduled_for=now() + timedelta(minutes=15)
+        )
+        logger.info(f"🕒 Scheduled follow-up1 for {phone_number} in 15 mins")
 
-        Timer(3600, send_whatsapp, args=[phone_number], kwargs={
-            "media_id": media_id, "name_param": name, "template_type": "followup2"
-        }).start()
-        logger.info(f"🕒 1-hour follow-up scheduled for {phone_number}")
+        MessageLog.objects.create(
+            phone=phone_number,
+            name=name,
+            template_type='followup2',
+            status='pending',
+            media_id=media_id,
+            scheduled_for=now() + timedelta(hours=1)
+        )
+        logger.info(f"🕒 Scheduled follow-up2 for {phone_number} in 1 hour")
+
     except Exception as e:
-        logger.error(f"❌ Error in follow-up scheduler: {str(e)}")
+        logger.error(f"❌ DB Scheduler Error: {str(e)}")
 
 # ----------------------------------------
 # ✅ Plain Text Utility Sender (Bulk)
