@@ -106,7 +106,7 @@ def automated_template_from_api(request):
     current_time = now.strftime("%H:%M")
 
     # ⏰ Only allow at 12:30 AM
-    if current_time != "01:30":
+    if current_time != "20:30":
         return JsonResponse({"status": f"⏳ Not time yet — current time: {current_time}"}, status=200)
 
     # 🛑 Already sent today
