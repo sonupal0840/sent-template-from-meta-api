@@ -26,9 +26,10 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'leads',
-    # 'senttemplate',
+    # 'leads',
+    'senttemplate',
     'django.contrib.sites',
+    'django_q',
     # 'django_celery_beat',
 ]
 
@@ -82,7 +83,7 @@ if DEBUG:
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': 'CyberTechZone',
             'USER': 'postgres',
-            'PASSWORD': 'Sonu@123',
+            'PASSWORD': 'Sonu*366',
             'HOST': 'localhost',
             'PORT': '5432',
         }
@@ -102,6 +103,15 @@ else:
 
 
 
+Q_CLUSTER = {
+    'name': 'whatsapp-daily-sender',
+    'workers': 4,
+    'timeout': 90,
+    'retry': 90,
+    'queue_limit': 1000,
+    'bulk': 1000,
+    'orm': 'default',
+}
 # Password validation
 AUTH_PASSWORD_VALIDATORS = [
     {'NAME': 'django.contrib.auth.password_validation.UserAttributeSimilarityValidator'},

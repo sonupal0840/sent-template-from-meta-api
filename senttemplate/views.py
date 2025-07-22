@@ -106,7 +106,7 @@ def automated_template_from_api(request):
 
         contacts = response.json()
         print(contacts)
-        # contacts = [{'phone':7000454350,'name':'sonu'}]
+        # contacts = [{'phone':8989512905,'name':'sonu'}]
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
 
