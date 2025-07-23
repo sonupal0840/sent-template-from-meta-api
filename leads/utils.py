@@ -7,7 +7,7 @@ from threading import Timer
 from django.conf import settings
 from django.utils.timezone import now
 from datetime import timedelta
-from .models import WhatsAppSession
+from .models import WhatsAppSession,MessageLog
 
 logger = logging.getLogger(__name__)
 
@@ -184,12 +184,12 @@ def send_whatsapp(phone_number, media_id=None, name_param=None, template_type='i
         status = "failed"
         logger.error(f"❌ WhatsApp Error: {str(e)}")
 
-    # MessageLog.objects.create(
-    #     phone=phone_number,
-    #     name=name_param or "User",
-    #     template_type=template_type,
-    #     status=status
-    # )
+    MessageLog.objects.create(
+        phone=phone_number,
+        name=name_param or "User",
+        template_type=template_type,
+        status=status
+    )
 
 # ----------------------------------------
 # ✅ First-time Message Auto Handler
