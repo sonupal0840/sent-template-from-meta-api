@@ -211,4 +211,20 @@ def trigger_bulk_whatsapp(request):
 # ----------------------------------------
 
 def whatsapp_session_page(request):
-    return render(request, 'whatsapp_session.html')
+    filter_option = request.GET.get('filter', 'all')
+    sessions = WhatsAppSession.objects.all()
+
+    if filter_option == 'today':
+        sessions = sessions.filter(last_message_at__date=now().date())
+    elif filter_option == '7days':
+        sessions = sessions.filter(last_message_at__gte=now() - timedelta(days=7))
+    elif filter_option == '30days':
+        sessions = sessions.filter(last_message_at__gte=now() - timedelta(days=30))
+
+    sessions = sessions.order_by('-last_message_at')
+
+    return render(request, 'whatsapp_session.html', {
+        'sessions': sessions,
+        'selected': filter_option
+    })
+
