@@ -10,6 +10,8 @@ from django.views.decorators.http import require_POST
 from threading import Thread
 from .utils import upload_file_get_media_id, send_template_message_to_numbers
 from senttemplate.models import MessageLog
+from django.shortcuts import render
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 last_sent_date = None  # 🧠 Track last sent date to avoid duplicates
@@ -100,26 +102,16 @@ def get_templates_from_meta(request):
 
 
 def automated_template_from_api(request):
-    global last_sent_date
-
-    now = datetime.now()
-    current_time = now.strftime("%H:%M")
-
-    # ⏰ Only allow at 12:30 AM
-    if current_time != "20:30":
-        return JsonResponse({"status": f"⏳ Not time yet — current time: {current_time}"}, status=200)
-
-    # 🛑 Already sent today
-    if last_sent_date == date.today():
-        return JsonResponse({"status": "✅ Message already sent today"}, status=200)
-
     try:
-        # You can use this to fetch real contacts from API
-        response = requests.get('https://callapi.sherlockslife.com/api/Values/contacts/', timeout=10)
-        contacts = response.json() if response.status_code == 200 else []
+        api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
+        response = requests.get(api_url, timeout=10)
 
-        # contacts = [{'phone': 8989512905, 'name': 'sonu'}]  # For testing fallback
+        if response.status_code != 200:
+            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
 
+        contacts = response.json()
+        print(contacts)
+        # contacts = [{'phone':7000454350,'name':'sonu'}]
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
 
@@ -189,3 +181,29 @@ def automated_template_from_api(request):
     except Exception as e:
         logger.exception("❌ Error in automated_template_from_api")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+from datetime import datetime
+
+def message_log_report(request):
+    query = request.GET.get("q", "")
+    selected_date = request.GET.get("date", "")  # date in yyyy-mm-dd format
+    logs = MessageLog.objects.all()
+
+    if query:
+        logs = logs.filter(Q(phone__icontains=query) | Q(name__icontains=query))
+
+    if selected_date:
+        try:
+            selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date=selected_date_obj)
+        except ValueError:
+            pass  # ignore if date parsing fails
+
+    logs = logs.order_by("-timestamp")
+
+    return render(request, "message_log_report.html", {
+        "logs": logs,
+        "query": query,
+        "selected_date": selected_date
+    })
