@@ -82,7 +82,7 @@ if DEBUG:
             'ENGINE': 'django.db.backends.postgresql',
             'NAME': 'CyberTechZone',
             'USER': 'postgres',
-            'PASSWORD': 'Sonu@123',
+            'PASSWORD': 'Sonu*366',
             'HOST': 'localhost',
             'PORT': '5432',
         }
