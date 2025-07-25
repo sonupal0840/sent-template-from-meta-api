@@ -103,15 +103,15 @@ def get_templates_from_meta(request):
 
 def automated_template_from_api(request):
     try:
-        # api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
-        # response = requests.get(api_url, timeout=10)
+        api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
+        response = requests.get(api_url, timeout=10)
 
-        # if response.status_code != 200:
-        #     return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+        if response.status_code != 200:
+            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
 
-        # contacts = response.json()
-        # print(contacts)
-        contacts = [{"phone":"07366897496","name":"Krishna Kumar"},{"phone":"07366897496","name":"Krishna Kumar"},{"phone":"7870085339","name":"Abhinav Kumar Vaidya "},{"phone":"7004684407","name":"Faisal Musaddique "},{"phone":"9155815582","name":"Shubham Prakash "}]
+        contacts = response.json()
+        print(contacts)
+        # contacts = [{'phone':7000454350,'name':'sonu'}]
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
 
