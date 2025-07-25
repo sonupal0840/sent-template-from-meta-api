@@ -9,6 +9,8 @@ from django.views.decorators.http import require_POST
 from threading import Thread
 from .utils import upload_file_get_media_id, send_template_message_to_numbers
 from senttemplate.models import MessageLog
+from django.shortcuts import render
+from django.db.models import Q
 
 logger = logging.getLogger(__name__)
 
@@ -173,3 +175,29 @@ def automated_template_from_api(request):
     except Exception as e:
         logger.exception("❌ Error in automated_template_from_api")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+from datetime import datetime
+
+def message_log_report(request):
+    query = request.GET.get("q", "")
+    selected_date = request.GET.get("date", "")  # date in yyyy-mm-dd format
+    logs = MessageLog.objects.all()
+
+    if query:
+        logs = logs.filter(Q(phone__icontains=query) | Q(name__icontains=query))
+
+    if selected_date:
+        try:
+            selected_date_obj = datetime.strptime(selected_date, "%Y-%m-%d").date()
+            logs = logs.filter(timestamp__date=selected_date_obj)
+        except ValueError:
+            pass  # ignore if date parsing fails
+
+    logs = logs.order_by("-timestamp")
+
+    return render(request, "message_log_report.html", {
+        "logs": logs,
+        "query": query,
+        "selected_date": selected_date
+    })
