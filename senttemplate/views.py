@@ -202,15 +202,15 @@ def automated_template_from_api(request):
             return JsonResponse({"status": "Skipped: Not 10:50 PM"}, status=200)
 
         # Simulated contact fetching (replace with actual API call)
-        contacts = [{'phone': 7000454350, 'name': 'sonu'}]
+        # contacts = [{'phone': 7000454350, 'name': 'sonu'}]
 
-        # api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
-        # response = requests.get(api_url, timeout=10)
+        api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
+        response = requests.get(api_url, timeout=10)
 
-        # if response.status_code != 200:
-        #     return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+        if response.status_code != 200:
+            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
 
-        # contacts = response.json()
+        contacts = response.json()
 
         if not contacts:
             logger.info("No contacts found to process")
