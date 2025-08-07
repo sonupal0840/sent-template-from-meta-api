@@ -196,10 +196,10 @@ def automated_template_from_api(request):
 
         # ✅ Only allow execution at 8:42 PM IST
         current_time = datetime.now().time()
-        allowed_time = time(10, 30)  # 8:42 PM IST
+        allowed_time = time(10, 50)  # 8:42 PM IST
         if current_time.hour != allowed_time.hour or current_time.minute != allowed_time.minute:
             logger.info(f"⏱️ Skipped execution — current time {current_time.strftime('%H:%M')} is not 8:42 PM")
-            return JsonResponse({"status": "Skipped: Not 10:30 PM"}, status=200)
+            return JsonResponse({"status": "Skipped: Not 10:50 PM"}, status=200)
 
         # Simulated contact fetching (replace with actual API call)
         contacts = [{'phone': 7000454350, 'name': 'sonu'}]
