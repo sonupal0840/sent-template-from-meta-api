@@ -29,7 +29,7 @@ INSTALLED_APPS = [
     # 'leads',
     'senttemplate',
     'django.contrib.sites',
-    'django_q',
+    # 'django_q',
     # 'django_celery_beat',
 ]
 
@@ -68,38 +68,38 @@ TEMPLATES = [
 WSGI_APPLICATION = 'leadgenerationFunnel.wsgi.application'
 
 # Database
-# DATABASES = {
-#     'default': {
-#         'ENGINE': 'django.db.backends.sqlite3',
-#         'NAME': BASE_DIR / 'db.sqlite3',
+DATABASES = {
+    'default': {
+        'ENGINE': 'django.db.backends.sqlite3',
+        'NAME': BASE_DIR / 'db.sqlite3',
+    }
+}
+
+
+# if DEBUG:
+#     # Local development database
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': 'CyberTechZone',
+#             'USER': 'postgres',
+#             'PASSWORD': 'Sonu*366',
+#             'HOST': 'localhost',
+#             'PORT': '5432',
+#         }
 #     }
-# }
-
-
-if DEBUG:
-    # Local development database
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'CyberTechZone',
-            'USER': 'postgres',
-            'PASSWORD': 'Sonu*366',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
-    }
-else:
-    # Production Render PostgreSQL
-    DATABASES = {
-        'default': {
-'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DB_NAME'),
-            'USER': env('DB_USER'),
-            'PASSWORD': env('DB_PASSWORD'),
-            'HOST': env('DB_HOST'),
-            'PORT': env('DB_PORT', default='5432'),
-        }
-    }
+# else:
+#     # Production Render PostgreSQL
+#     DATABASES = {
+#         'default': {
+# 'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': env('DB_NAME'),
+#             'USER': env('DB_USER'),
+#             'PASSWORD': env('DB_PASSWORD'),
+#             'HOST': env('DB_HOST'),
+#             'PORT': env('DB_PORT', default='5432'),
+#         }
+#     }
 
 
 
@@ -172,4 +172,5 @@ META_PHONE_NUMBER_ID = env('META_PHONE_NUMBER_ID')
 META_WABA_ID = env('META_WABA_ID')
 
 META_VERIFY_TOKEN = env('META_VERIFY_TOKEN')
+CRON_SECRET_KEY=env('CRON_SECRET_KEY')
 

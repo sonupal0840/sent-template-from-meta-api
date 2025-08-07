@@ -101,17 +101,17 @@ def get_templates_from_meta(request):
     return JsonResponse({'error': 'Failed to fetch templates'}, status=400)
 
 
-def automated_template_from_api(request):
+# def automated_template_from_api(request):
     try:
-        api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
-        response = requests.get(api_url, timeout=10)
+        # api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
+        # response = requests.get(api_url, timeout=10)
 
-        if response.status_code != 200:
-            return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+        # if response.status_code != 200:
+        #     return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
 
-        contacts = response.json()
-        print(contacts)
-        # contacts = [{'phone':7000454350,'name':'sonu'}]
+        # contacts = response.json()
+        # print(contacts)
+        contacts = [{'phone':7000454350,'name':'sonu'}]
         if not contacts:
             return JsonResponse({"error": "No contacts found"}, status=400)
 
@@ -181,6 +181,108 @@ def automated_template_from_api(request):
     except Exception as e:
         logger.exception("❌ Error in automated_template_from_api")
         return JsonResponse({"error": str(e)}, status=500)
+
+
+from datetime import datetime, time
+from django.utils.timezone import now
+
+def automated_template_from_api(request):
+    try:
+        # ✅ Optional token protection (add ?token=XYZ to your cron job URL)
+        token = request.GET.get('token')
+        if token != getattr(settings, "CRON_SECRET_KEY", "your_default_token_here"):
+            logger.warning("Unauthorized access attempt")
+            return JsonResponse({"status": "Ignored: Unauthorized token"}, status=200)
+
+        # ✅ Only allow execution at 8:42 PM IST
+        current_time = datetime.now().time()
+        allowed_time = time(10, 30)  # 8:42 PM IST
+        if current_time.hour != allowed_time.hour or current_time.minute != allowed_time.minute:
+            logger.info(f"⏱️ Skipped execution — current time {current_time.strftime('%H:%M')} is not 8:42 PM")
+            return JsonResponse({"status": "Skipped: Not 10:30 PM"}, status=200)
+
+        # Simulated contact fetching (replace with actual API call)
+        contacts = [{'phone': 7000454350, 'name': 'sonu'}]
+
+        # api_url = "https://callapi.sherlockslife.com/api/Values/contacts/"  # Replace with actual
+        # response = requests.get(api_url, timeout=10)
+
+        # if response.status_code != 200:
+        #     return JsonResponse({"error": "Failed to fetch contacts"}, status=400)
+
+        # contacts = response.json()
+
+        if not contacts:
+            logger.info("No contacts found to process")
+            return JsonResponse({"status": "No contacts found"}, status=200)
+
+        image_path = os.path.join(settings.BASE_DIR, 'static', 'media', 'rejected.jpg')
+        if not os.path.exists(image_path):
+            logger.warning("Image not found")
+            return JsonResponse({"status": "Image file not found"}, status=200)
+
+        with open(image_path, 'rb') as image_file:
+            media_id = upload_file_get_media_id(image_file, media_type='image')
+
+        if not media_id:
+            logger.error("Media upload failed")
+            return JsonResponse({"status": "Media upload failed"}, status=200)
+
+        numbers = []
+        variables_dict = {}
+
+        for contact in contacts:
+            phone = contact.get("phone")
+            name = contact.get("name", "User")
+            if not phone:
+                continue
+
+            already_sent = MessageLog.objects.filter(
+                phone=phone,
+                template_type='status_updated',
+                status='sent'
+            ).exists()
+            if already_sent:
+                continue
+
+            numbers.append(phone)
+            variables_dict[phone] = {"1": name}
+
+        def send_to_all():
+            for phone in numbers:
+                variables = variables_dict.get(phone, {"1": "User"})
+                try:
+                    send_template_message_to_numbers(
+                        template_name='status_updated',
+                        numbers=[phone],
+                        variables=variables,
+                        language="en_US",
+                        media_payload={"type": "image", "media_id": media_id}
+                    )
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=variables.get("1", "User"),
+                        template_type='status_updated',
+                        status='sent'
+                    )
+                except Exception as e:
+                    logger.error(f"❌ Failed to send to {phone}: {str(e)}")
+                    MessageLog.objects.create(
+                        phone=phone,
+                        name=variables.get("1", "User"),
+                        template_type='status_updated',
+                        status='failed'
+                    )
+
+        if numbers:
+            Thread(target=send_to_all).start()
+            return JsonResponse({"status": f"📤 Started sending to {len(numbers)} new contacts"}, status=200)
+        else:
+            return JsonResponse({"status": "No new contacts to send"}, status=200)
+
+    except Exception as e:
+        logger.exception("❌ Error in automated_template_from_api")
+        return JsonResponse({"status": f"Error handled: {str(e)}"}, status=200)  # ✅ Never return 500
 
 
 from datetime import datetime
