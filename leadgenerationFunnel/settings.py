@@ -1,6 +1,7 @@
 from pathlib import Path
 import os
 import environ
+import dj_database_url
 
 
 # Initialize environment variables
@@ -74,32 +75,36 @@ WSGI_APPLICATION = 'leadgenerationFunnel.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
-
-
-if DEBUG:
-    # Local development database
-    DATABASES = {
-        'default': {
-            'ENGINE': 'django.db.backends.postgresql',
-            'NAME': 'CyberTechZone',
-            'USER': 'postgres',
-            'PASSWORD': 'Sonu*366',
-            'HOST': 'localhost',
-            'PORT': '5432',
-        }
+DATABASES = {
+        'default': dj_database_url.config(
+            default=env('DATABASE_URL')  # Render se milega
+        )
     }
-else:
-    # Production Render PostgreSQL
-    DATABASES = {
-        'default': {
-'ENGINE': 'django.db.backends.postgresql',
-            'NAME': env('DB_NAME'),
-            'USER': env('DB_USER'),
-            'PASSWORD': env('DB_PASSWORD'),
-            'HOST': env('DB_HOST'),
-            'PORT': env('DB_PORT', default='5432'),
-        }
-    }
+
+# if DEBUG:
+#     # Local development database
+#     DATABASES = {
+#         'default': {
+#             'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': 'CyberTechZone',
+#             'USER': 'postgres',
+#             'PASSWORD': 'Sonu*366',
+#             'HOST': 'localhost',
+#             'PORT': '5432',
+#         }
+#     }
+# else:
+#     # Production Render PostgreSQL
+#     DATABASES = {
+#         'default': {
+# 'ENGINE': 'django.db.backends.postgresql',
+#             'NAME': env('DB_NAME'),
+#             'USER': env('DB_USER'),
+#             'PASSWORD': env('DB_PASSWORD'),
+#             'HOST': env('DB_HOST'),
+#             'PORT': env('DB_PORT', default='5432'),
+#         }
+#     }
 
 
 
