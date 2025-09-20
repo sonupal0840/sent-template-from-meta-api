@@ -75,11 +75,26 @@ WSGI_APPLICATION = 'leadgenerationFunnel.wsgi.application'
 #         'NAME': BASE_DIR / 'db.sqlite3',
 #     }
 # }
+# DATABASES = {
+#         'default': dj_database_url.config(
+#             default=env('DATABASE_URL')  # Render se milega
+#         )
+#     }
+
 DATABASES = {
-        'default': dj_database_url.config(
-            default=env('DATABASE_URL')  # Render se milega
-        )
+    'default': {
+        'ENGINE': 'mssql',
+        'NAME': 'OnboardingUsers',
+        'USER': 'Sherlocksauto',
+        'PASSWORD': 'Sherlocks@8072',
+        'HOST': 'aspire.herosite.pro',
+        'PORT': '1433',
+        'OPTIONS': {
+            'driver': 'ODBC Driver 18 for SQL Server',
+            'extra_params': "CurrentSchema=DjangoAuth",  # Django tables apne schema me
+        },
     }
+}
 
 # if DEBUG:
 #     # Local development database
